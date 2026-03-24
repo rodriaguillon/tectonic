@@ -41,6 +41,7 @@
   hosts: victim
   gather_facts: yes
   become: yes
+  # serial: 1  # Run one host at a time to avoid loop device race conditions
 
   # Variables for simulation
   vars:
@@ -210,8 +211,8 @@
     # PHASE 5: FLAG FILE GENERATION (Forensic Challenge)
     # ========================================================================
     # Create a hidden flag file for DFIR training:
-    #   1. Generate plain-text flag file (flagsinha.txt)
-    #   2. Encrypt with AES-256-CBC (flagsinha.txt.WNCRY)
+    #   1. Generate plain-text flag file (flag.txt)
+    #   2. Encrypt with AES-256-CBC (flag.txt.WNCRY)
     #   3. Delete original plain-text file
     #   4. Delete encrypted file using debugfs (forensically recoverable)
     #
@@ -222,20 +223,14 @@
 
     - name: "[FLAG] Create flag file with secret message"
       generate_file:
-        path: "{{ mount_point }}/srv/samba/share/flagsinha.txt"
+        path: "{{ mount_point }}/srv/samba/share/flag.txt"
         extension: txt
-        content: "Encontraste la flag, sos el mejor dfir user del pais"
-
-    - name: "created archive"
-      generate_file:
-        path: "/tmp/orco.txt"
-        extension: txt
-        content: "Orco file for testing"
+        content: "Encontraste la flag"
 
     - name: "[FLAG] Encrypt flag file with AES-256-CBC (.WNCRY extension)"
       encrypt_files_aes:
         files:
-          - "{{ mount_point }}/srv/samba/share/flagsinha.txt"
+          - "{{ mount_point }}/srv/samba/share/flag.txt"
         key: "0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF" # 32 bytes key for AES-256
         encrypted_extension: "WNCRY"
         keep_original: false
@@ -252,7 +247,7 @@
 
     - name: "[FLAG] Delete encrypted flag file with debugfs (forensically recoverable)"
       delete_file_debugfs:
-        filename: "flagsinha.txt.WNCRY"
+        filename: "flag.txt.WNCRY"
         device: "{{ loop_device }}"
         directory: "/srv/samba/share"
 
